@@ -12,9 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Runs a jar using a cluster that supports Google Cloud Dataflow.
-
-
+"""Runs a jar using a cluster that supports Cloud Dataflow.
 """
 
 import datetime
@@ -24,7 +22,6 @@ import tempfile
 
 from perfkitbenchmarker import configs
 from perfkitbenchmarker import sample
-from perfkitbenchmarker import dataflow_service
 from perfkitbenchmarker import flags
 
 
@@ -34,12 +31,8 @@ BENCHMARK_CONFIG = """
 dataflow:
   description: Run a jar on a dataflow cluster.
   dataflow_service:
+    cloud: GCP
     service_type: managed
-    worker_group:
-      vm_spec:
-        GCP:
-          machine_type: n1-standard-4
-          boot_disk_size: 500
 """
 
 # This points to a file on the dataflow cluster.
@@ -49,10 +42,12 @@ flags.DEFINE_string('beam_jarfile', None,
                     'If none, use the default Beam jar.')
 flags.DEFINE_string('beam_classname', DEFAULT_CLASSNAME,
                     'Classname to be used')
-flags.DEFINE_bool('beam_print_stdout', True, 'Print the standard '
+flags.DEFINE_bool('dataflow_print_stdout', True, 'Print the standard '
                   'output of the job')
 flags.DEFINE_list('dataflow_job_arguments', [], 'Arguments to be passed '
                   'to the class given by beam_classname')
+flags.DEFINE_string('staging_bucket', None, 'Bucket for staging files')
+flags.DEFINE_string('output_bucket', None, 'Bucket to store output')
 
 FLAGS = flags.FLAGS
 
@@ -75,14 +70,15 @@ def Run(benchmark_spec):
   Returns:
     A list of sample.Sample objects.
   """
+  if FLAGS.staging_bucket is None or FLAGS.output_bucket is None:
+    raise Exception('staging_bucket and output_bucket must be supplied.')
   dataflow_cluster = benchmark_spec.dataflow_service
   jar_start = datetime.datetime.now()
 
   stdout_path = None
   results = []
-  jarfile = "test_jarfile.jar"
   try:
-    if FLAGS.beam_print_stdout:
+    if FLAGS.dataflow_print_stdout:
       # We need to get a name for a temporary file, so we create
       # a file, then close it, and use that path name.
       stdout_file = tempfile.NamedTemporaryFile(suffix='.stdout',
@@ -92,20 +88,21 @@ def Run(benchmark_spec):
       stdout_file.close()
 
     stats = dataflow_cluster.SubmitJob(FLAGS.beam_classname,
-                                    job_stdout_file=stdout_path,
-                                    job_arguments=FLAGS.dataflow_job_arguments)
-    if not stats["we did it"]:
-      raise Exception('Class {0} from jar {1} did not run'.format(
-          FLAGS.beam_classname, jarfile))
+                                       FLAGS.staging_bucket,
+                                       FLAGS.output_bucket,
+                                       job_stdout_file=stdout_path,
+                                       job_arguments=FLAGS.dataflow_job_arguments)
+    if not stats['success']:
+      raise Exception('Class {0} did not run'.format(
+          FLAGS.beam_classname))
     jar_end = datetime.datetime.now()
     if stdout_path:
       with open(stdout_path, 'r') as f:
         logging.info('The output of the job is ' + f.read())
     metadata = dataflow_cluster.GetMetadata()
-    metadata.update({'jarfile': jarfile,
-                     'class': FLAGS.beam_classname,
+    metadata.update({'class': FLAGS.beam_classname,
                      'job_arguments': str(FLAGS.dataflow_job_arguments),
-                     'print_stdout': str(FLAGS.beam_print_stdout)})
+                     'print_stdout': str(FLAGS.dataflow_print_stdout)})
 
     results.append(sample.Sample('wall_time',
                                  (jar_end - jar_start).total_seconds(),

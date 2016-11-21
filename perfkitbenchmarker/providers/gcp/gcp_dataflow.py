@@ -13,14 +13,34 @@
 # limitations under the License.
 """Module containing class for GCP's Cloud Dataflow service."""
 
+import time
+
 from perfkitbenchmarker import flags
 from perfkitbenchmarker import providers
 from perfkitbenchmarker import dataflow_service
-from perfkitbenchmarker.providers.gcp import util
 
-from subprocess import check_call, check_output
+from subprocess import check_call
 
 FLAGS = flags.FLAGS
+
+archetype_cmd = """mvn archetype:generate \
+      -DarchetypeArtifactId=beam-sdks-java-maven-archetypes-examples \
+      -DarchetypeVersion=LATEST \
+      -DarchetypeGroupId=org.apache.beam \
+      -DgroupId=org.example \
+      -DartifactId=word-count-beam-{0} \
+      -Dversion="0.1" \
+      -DinteractiveMode=false \
+      -Dpackage=org.apache.beam.examples \
+"""
+
+run_cmd = """mvn exec:java \
+      -Dexec.mainClass=org.apache.beam.examples.WordCount \
+      -Dexec.args="--runner=BlockingDataflowRunner \
+            --gcpTempLocation=gs://{0}/tmp \
+            --inputFile=gs://apache-beam-samples/shakespeare/* \
+            --output=gs://{1}/counts"
+"""
 
 
 class GcpDataflow(dataflow_service.BaseDataflowService):
@@ -31,29 +51,31 @@ class GcpDataflow(dataflow_service.BaseDataflowService):
 
   def __init__(self, dataflow_service_spec):
     super(GcpDataflow, self).__init__(dataflow_service_spec)
-    self.project = self.spec.worker_group.vm_spec.project
-  
+
   @staticmethod
   def _GetStats(stdout):
     return {}
   
   def _Create(self):
-    check_call(['mvn archetype:generate -DarchetypeArtifactId=beam-sdks-java-maven-archetypes-examples -DarchetypeVersion=LATEST -DarchetypeGroupId=org.apache.beam -DgroupId=org.example -DartifactId=word-count-beam -Dversion="0.1" -DinteractiveMode=false -Dpackage=org.apache.beam.examples'], shell=True)
-    check_call(['mvn compile'], cwd='/Users/jasonkuster/github/perfkitbenchmarker/word-count-beam', shell=True)
+    self.tmp_num = time.time()
+    check_call([archetype_cmd.format(self.tmp_num)], cwd='/tmp', shell=True)
+    check_call(['mvn compile'],
+               cwd='/tmp/word-count-beam-{0}'.format(self.tmp_num),
+               shell=True)
 
   def _Delete(self):
-    check_call(['rm', '-r', 'word-count-beam'])
+    check_call(['rm', '-r', '/tmp/word-count-beam-{0}'.format(self.tmp_num)])
     pass
 
   def _exists(self):
     return True
 
-  def SubmitJob(self, class_name, job_stdout_file=None, job_arguments=None,
-                  version='nightly'):
-    check_call(['mvn exec:java -Dexec.mainClass=org.apache.beam.examples.WordCount -Dexec.args="--runner=BlockingDataflowRunner --gcpTempLocation=gs://jasonkuster-temp/tmp --inputFile=gs://apache-beam-samples/shakespeare/* --output=gs://jasonkuster-temp/counts"'],
-               cwd='/Users/jasonkuster/github/perfkitbenchmarker/word-count-beam',
+  def SubmitJob(self, class_name, staging_bucket, output_bucket,
+                job_stdout_file=None, job_arguments=None, version='nightly'):
+    check_call([run_cmd.format(staging_bucket, output_bucket)],
+               cwd='/tmp/word-count-beam-{0}'.format(self.tmp_num),
                shell=True)
-    return {"we did it": "Yay"}
+    return {"success": True}
   
   def SetClusterProperty(self):
     pass

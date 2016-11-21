@@ -253,7 +253,7 @@ class BenchmarkSpec(object):
       return
 
     dataflow_spec = self.config.dataflow_service
-    cloud = dataflow_spec.worker_group.cloud
+    cloud = dataflow_spec.cloud
     providers.LoadProvider(cloud)
     service_type = dataflow_spec.service_type
     dataflow_service_class = dataflow_service.GetDataflowServiceClass(

@@ -12,16 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Benchmarking support for Google Cloud Dataflow services.
+"""Benchmarking support for the Cloud Dataflow service.
 
 This class contains options which allow for benchmarking of Apache Beam
-against the Google Cloud Dataflow service.
-
+against the Cloud Dataflow service.
 """ 
 
 import abc
 
-from perfkitbenchmarker import flags
 from perfkitbenchmarker import resource
 
 PROVIDER_MANAGED = 'managed'
@@ -31,6 +29,7 @@ _DATAFLOW_SERVICE_REGISTRY = {}
 def enum(**enums):
   return type('Enum', (), enums)
 
+# TODO(jasonkuster): Support different releases of Beam.
 BEAM_VERSION = enum(HEAD='head', NIGHTLY='nightly')
 
 def GetDataflowServiceClass(cloud, service_type):
@@ -64,8 +63,9 @@ class BaseDataflowService(resource.BaseResource):
     self.spec = dataflow_service_spec
 
   @abc.abstractmethod
-  def SubmitJob(self, class_name, job_stdout_file=None, job_arguments=None,
-                  version=BEAM_VERSION.NIGHTLY):
+  def SubmitJob(self, class_name, staging_bucket, output_bucket,
+                job_stdout_file=None, job_arguments=None,
+                version=BEAM_VERSION.NIGHTLY):
     """Submit a job to the Dataflow service.
 
     Submits a job and waits for it to complete.
@@ -88,5 +88,5 @@ class BaseDataflowService(resource.BaseResource):
     pass
 
   def GetMetadata(self):
-    """Return a dictionary of the metadata for this cluster."""
+    """Return a dictionary of the metadata about this service."""
     return {}

@@ -169,7 +169,8 @@ class _DataflowServiceSpec(spec.BaseSpec):
   """Configurable options of an Google Cloud Dataflow Service.
 
   Attributes:
-    service_type: string.  pkb_managed or managed_service
+    cloud: string. Which cloud to run on; currently only 'GCP'.
+    service_type: string.  currently only 'managed' is supported.
   """
 
   def __init__(self, component_full_name, flag_values=None, **kwargs):
@@ -188,10 +189,11 @@ class _DataflowServiceSpec(spec.BaseSpec):
     """
     result = super(_DataflowServiceSpec, cls)._GetOptionDecoderConstructions()
     result.update({
+        'cloud': (option_decoders.EnumDecoder, {
+            'valid_values': providers.VALID_CLOUDS}),
         'service_type': (option_decoders.EnumDecoder, {
             'default': dataflow_service.PROVIDER_MANAGED,
             'valid_values': [dataflow_service.PROVIDER_MANAGED]}),
-        'worker_group': (_VmGroupSpecDecoder, {}),
     })
     return result
 
