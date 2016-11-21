@@ -31,6 +31,7 @@ from perfkitbenchmarker import flags
 from perfkitbenchmarker import os_types
 from perfkitbenchmarker import provider_info
 from perfkitbenchmarker import providers
+from perfkitbenchmarker import dataflow_service
 from perfkitbenchmarker import spark_service
 from perfkitbenchmarker import static_virtual_machine as static_vm
 from perfkitbenchmarker import virtual_machine
@@ -102,6 +103,7 @@ class BenchmarkSpec(object):
     self.file_name = os.path.join(vm_util.GetTempDir(), self.uid)
     self.uuid = '%s-%s' % (FLAGS.run_uri, uuid.uuid4())
     self.always_call_cleanup = False
+    self.dataflow_service = None
     self.spark_service = None
 
     self._zone_index = 0
@@ -246,6 +248,19 @@ class BenchmarkSpec(object):
         self.spark_service.vms[group_name] = self.vm_groups[group_name]
 
 
+  def ConstructDataflowService(self):
+    if self.config.dataflow_service is None:
+      return
+
+    dataflow_spec = self.config.dataflow_service
+    cloud = dataflow_spec.worker_group.cloud
+    providers.LoadProvider(cloud)
+    service_type = dataflow_spec.service_type
+    dataflow_service_class = dataflow_service.GetDataflowServiceClass(
+        cloud, service_type)
+    self.dataflow_service = dataflow_service_class(dataflow_spec)
+
+
   def ConstructSparkService(self):
     """Create the spark_service object and create groups for its vms."""
     if self.config.spark_service is None:
@@ -298,6 +313,8 @@ class BenchmarkSpec(object):
       vm_util.GenerateSSHConfig(sshable_vms, sshable_vm_groups)
     if self.spark_service:
       self.spark_service.Create()
+    if self.dataflow_service:
+      self.dataflow_service.Create()
 
   def Delete(self):
     if self.deleted:
@@ -305,6 +322,8 @@ class BenchmarkSpec(object):
 
     if self.spark_service:
       self.spark_service.Delete()
+    if self.dataflow_service:
+      self.dataflow_service.Delete()
 
     if self.vms:
       try:

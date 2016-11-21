@@ -28,6 +28,7 @@ from perfkitbenchmarker import flags
 from perfkitbenchmarker import os_types
 from perfkitbenchmarker import providers
 from perfkitbenchmarker import static_virtual_machine
+from perfkitbenchmarker import dataflow_service
 from perfkitbenchmarker import spark_service
 from perfkitbenchmarker import virtual_machine
 from perfkitbenchmarker.configs import option_decoders
@@ -162,6 +163,37 @@ class _StaticVmListDecoder(option_decoders.ListDecoder):
   def __init__(self, **kwargs):
     super(_StaticVmListDecoder, self).__init__(
         default=list, item_decoder=_StaticVmDecoder(), **kwargs)
+
+
+class _DataflowServiceSpec(spec.BaseSpec):
+  """Configurable options of an Google Cloud Dataflow Service.
+
+  Attributes:
+    service_type: string.  pkb_managed or managed_service
+  """
+
+  def __init__(self, component_full_name, flag_values=None, **kwargs):
+    super(_DataflowServiceSpec, self).__init__(component_full_name,
+                                            flag_values=flag_values,
+                                            **kwargs)
+
+  @classmethod
+  def _GetOptionDecoderConstructions(cls):
+    """Gets decoder classes and constructor args for each configurable option.
+
+    Returns:
+      dict. Maps option name string to a (ConfigOptionDecoder class, dict) pair.
+      The pair specifies a decoder class and its __init__() keyword arguments
+      to construct in order to decode the named option.
+    """
+    result = super(_DataflowServiceSpec, cls)._GetOptionDecoderConstructions()
+    result.update({
+        'service_type': (option_decoders.EnumDecoder, {
+            'default': dataflow_service.PROVIDER_MANAGED,
+            'valid_values': [dataflow_service.PROVIDER_MANAGED]}),
+        'worker_group': (_VmGroupSpecDecoder, {}),
+    })
+    return result
 
 
 class _SparkServiceSpec(spec.BaseSpec):
@@ -385,6 +417,32 @@ class _VmGroupSpecDecoder(option_decoders.TypeVerifier):
                         **vm_group_config)
 
 
+class _DataflowServiceDecoder(option_decoders.TypeVerifier):
+  """Validates the dataflow_service dictionary of a benchmark config object."""
+  def __init__(self, **kwargs):
+    super(_DataflowServiceDecoder, self).__init__(valid_types=(dict,), **kwargs)
+
+  def Decode(self, value, component_full_name, flag_values):
+    """Verifies dataflow_service dictionary of a benchmark config object.
+
+    Args:
+      value: dict Dataflow Service config dictionary
+      component_full_name: string.  Fully qualified name of the configurable
+      component containing the config option.
+      flag_values: flags.FlagValues.  Runtime flag values to be propagated to
+        BaseSpec constructors.
+    Returns:
+      _DataflowServiceSpec Build from the config passed in in value.
+    Raises:
+      errors.Config.InvalidateValue upon invalid input value.
+    """
+    dataflow_service_config = super(_DataflowServiceDecoder, self).Decode(
+        value, component_full_name, flag_values)
+    result = _DataflowServiceSpec(self._GetOptionFullName(component_full_name),
+                               flag_values, **dataflow_service_config)
+    return result
+
+
 class _SparkServiceDecoder(option_decoders.TypeVerifier):
   """Validates the spark_service dictionary of a benchmark config object."""
   def __init__(self, **kwargs):
@@ -470,6 +528,7 @@ class BenchmarkConfigSpec(spec.BaseSpec):
         'name': (option_decoders.StringDecoder, {'default': None}),
         'flags': (FlagsDecoder, {}),
         'vm_groups': (_VmGroupsDecoder, {'default': {}}),
+        'dataflow_service': (_DataflowServiceDecoder, {'default': None}),
         'spark_service': (_SparkServiceDecoder, {'default': None})})
     return result
 

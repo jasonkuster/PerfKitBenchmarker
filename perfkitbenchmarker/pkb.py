@@ -77,6 +77,7 @@ from perfkitbenchmarker import linux_benchmarks
 from perfkitbenchmarker import log_util
 from perfkitbenchmarker import os_types
 from perfkitbenchmarker import requirements
+from perfkitbenchmarker import dataflow_service
 from perfkitbenchmarker import spark_service
 from perfkitbenchmarker import stages
 from perfkitbenchmarker import static_virtual_machine
@@ -184,6 +185,9 @@ flags.DEFINE_bool(
 flags.DEFINE_boolean(
     'ignore_package_requirements', False,
     'Disables Python package requirement runtime checks.')
+flags.DEFINE_enum('dataflow_service_type', None,
+                  [dataflow_service.PROVIDER_MANAGED],
+                  'Type of dataflow service to use')
 flags.DEFINE_enum('spark_service_type', None,
                   [spark_service.PKB_MANAGED, spark_service.PROVIDER_MANAGED],
                   'Type of spark service to use')
@@ -350,6 +354,7 @@ def DoProvisionPhase(name, spec, timer):
   logging.info('Provisioning resources for benchmark %s', name)
   # spark service needs to go first, because it adds some vms.
   spec.ConstructSparkService()
+  spec.ConstructDataflowService()
   spec.ConstructVirtualMachines()
   # Pickle the spec before we try to create anything so we can clean
   # everything up on a second run if something goes wrong.
