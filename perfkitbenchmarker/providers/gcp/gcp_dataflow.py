@@ -35,11 +35,11 @@ archetype_cmd = """mvn archetype:generate \
 """
 
 run_cmd = """mvn exec:java \
-      -Dexec.mainClass=org.apache.beam.examples.WordCount \
+      -Dexec.mainClass={0} \
       -Dexec.args="--runner=BlockingDataflowRunner \
-            --gcpTempLocation=gs://{0}/tmp \
-            --inputFile=gs://apache-beam-samples/shakespeare/* \
-            --output=gs://{1}/counts"
+            --gcpTempLocation=gs://{1}/tmp \
+            --inputFile={2} \
+            --output=gs://{3}/counts"
 """
 
 
@@ -70,9 +70,9 @@ class GcpDataflow(dataflow_service.BaseDataflowService):
   def _exists(self):
     return True
 
-  def SubmitJob(self, class_name, staging_bucket, output_bucket,
+  def SubmitJob(self, class_name, input_file, staging_bucket, output_bucket,
                 job_stdout_file=None, job_arguments=None, version='nightly'):
-    check_call([run_cmd.format(staging_bucket, output_bucket)],
+    check_call([run_cmd.format(class_name, staging_bucket, output_bucket)],
                cwd='/tmp/word-count-beam-{0}'.format(self.tmp_num),
                shell=True)
     return {"success": True}

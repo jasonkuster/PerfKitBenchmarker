@@ -63,7 +63,7 @@ class BaseDataflowService(resource.BaseResource):
     self.spec = dataflow_service_spec
 
   @abc.abstractmethod
-  def SubmitJob(self, class_name, staging_bucket, output_bucket,
+  def SubmitJob(self, class_name, input_file, staging_bucket, output_bucket,
                 job_stdout_file=None, job_arguments=None,
                 version=BEAM_VERSION.NIGHTLY):
     """Submit a job to the Dataflow service.

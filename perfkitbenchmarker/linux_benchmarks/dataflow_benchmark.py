@@ -37,11 +37,11 @@ dataflow:
 
 # This points to a file on the dataflow cluster.
 DEFAULT_CLASSNAME = 'org.apache.beam.examples.WordCount'
+DEFAULT_INPUT = 'gs://apache-beam-samples/shakespeare/*'
 
-flags.DEFINE_string('beam_jarfile', None,
-                    'If none, use the default Beam jar.')
 flags.DEFINE_string('beam_classname', DEFAULT_CLASSNAME,
                     'Classname to be used')
+flags.DEFINE_string('beam_input', DEFAULT_INPUT, 'Input file to be used')
 flags.DEFINE_bool('dataflow_print_stdout', True, 'Print the standard '
                   'output of the job')
 flags.DEFINE_list('dataflow_job_arguments', [], 'Arguments to be passed '
@@ -88,6 +88,7 @@ def Run(benchmark_spec):
       stdout_file.close()
 
     stats = dataflow_cluster.SubmitJob(FLAGS.beam_classname,
+                                       FLAGS.beam_input,
                                        FLAGS.staging_bucket,
                                        FLAGS.output_bucket,
                                        job_stdout_file=stdout_path,
