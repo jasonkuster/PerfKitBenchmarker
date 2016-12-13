@@ -72,7 +72,7 @@ class GcpDataflow(dataflow_service.BaseDataflowService):
 
   def SubmitJob(self, class_name, input_file, staging_bucket, output_bucket,
                 job_stdout_file=None, job_arguments=None, version='nightly'):
-    check_call([run_cmd.format(class_name, staging_bucket, output_bucket)],
+    check_call([run_cmd.format(class_name, staging_bucket, input_file, output_bucket)],
                cwd='/tmp/word-count-beam-{0}'.format(self.tmp_num),
                shell=True)
     return {"success": True}
