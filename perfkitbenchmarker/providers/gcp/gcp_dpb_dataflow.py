@@ -82,6 +82,7 @@ class GcpDpbDataflow(dpb_service.BaseDpbService):
     else:
       disk_size_gb = None
 
+
     cmd = []
 
     # Needed to verify java executable is on the path
@@ -110,10 +111,8 @@ class GcpDpbDataflow(dpb_service.BaseDpbService):
     cmd.append("-DbeamTestPipelineOptions='[{}]'".format(', '.join(beam_args)))
     full_cmd = ' '.join(cmd)
     stdout, _, _ = vm_util.IssueCommand([full_cmd],
-                                        cwd=os.path.join(
-                                          vm_util.GetTempDir(),
-                                          'beam'),
-                                        use_shell=True)
+                                        cwd=self.beam_dir,
+                                        use_shell=True, timeout=600)
 
   def SetClusterProperty(self):
     pass

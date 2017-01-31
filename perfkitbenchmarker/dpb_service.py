@@ -33,6 +33,8 @@ flags.DEFINE_string('static_dpb_service_instance', None,
                     'assumed to be ready.')
 flags.DEFINE_string('dpb_log_level', 'FATAL', 'Manipulate service log level')
 flags.DEFINE_boolean('ci_run', False, 'Set if running in Beam Jenkins.')
+flags.DEFINE_string('dpb_beam_location', None, 'Location of already checked '
+                                               'out Beam codebase.')
 
 _DPB_SERVICE_REGISTRY = {}
 FLAGS = flags.FLAGS
@@ -130,6 +132,10 @@ class BaseDpbService(resource.BaseResource):
     super(BaseDpbService, self).__init__(user_managed=is_user_managed)
     self.spec = dpb_service_spec
     self.cluster_id = dpb_service_spec.static_dpb_service_instance
+    if FLAGS.dpb_beam_location is None:
+      self.beam_dir = os.path.join(vm_util.GetTempDir(), 'beam')
+    else:
+      self.beam_dir = FLAGS.dpb_beam_location
     self._InitializeBeamJars()
 
   def _InitializeBeamJars(self):
@@ -137,18 +143,19 @@ class BaseDpbService(resource.BaseResource):
     cmd = self.maven_command
     if FLAGS.ci_run:
         cmd = "{0}{1}".format(self.beam_jenkins_prefix, self.maven_command)
-    vm_util.IssueCommand(['git clone https://github.com/apache/beam.git'],
-                         cwd=vm_util.GetTempDir(),
-                         use_shell=True)
+    if FLAGS.dpb_beam_location is None:
+      vm_util.IssueCommand(['git clone https://github.com/apache/beam.git'],
+                           cwd=vm_util.GetTempDir(),
+                           use_shell=True)
     if self.SERVICE_TYPE is DATAFLOW:
       vm_util.IssueCommand([
           '{} clean install -DskipTests -Dcheckstyle.skip=true -Pdataflow-runner'.format(cmd)],
-          cwd=os.path.join(vm_util.GetTempDir(), 'beam'),
+          cwd=self.beam_dir,
           use_shell=True)
     elif self.SERVICE_TYPE is DATAPROC:
       vm_util.IssueCommand([
           '{} clean package -Pspark-runner -DskipTests'.format(cmd)],
-          cwd=os.path.join(vm_util.GetTempDir(), 'beam'),
+          cwd=self.beam_dir,
           use_shell=True)
 
   @abc.abstractmethod
