@@ -143,6 +143,7 @@ def Run(benchmark_spec):
         FLAGS.dpb_dataflow_staging_location))
     job_arguments.append('"--tempRoot={}"'.format(
         FLAGS.dpb_dataflow_staging_location))
+    job_arguments.append('"--inputFile={}"'.format(input_location))
     #job_arguments.append('--runner={}'.format(
     #    gcp_dpb_dataflow.DATAFLOW_RUNNER))
     if not FLAGS.dpb_wordcount_out_base:
@@ -152,13 +153,13 @@ def Run(benchmark_spec):
     # job_arguments.append('"--output={}/output/"'.format(base_out))
   else:
     input_location = FLAGS.dpb_wordcount_input
+    job_arguments.append('--inputFile={}'.format(input_location))
     jarfile = os.path.join(vm_util.GetTempDir(),
                              'beam/examples/java/target/beam-examples-java-bundled-0.5.0-SNAPSHOT.jar')
     job_arguments.append('--runner={}'.format(
         gcp_dpb_dataproc.SPARK_RUNNER))
     job_arguments.append('--output=output/output')
 
-  job_arguments.append('--inputFile={}'.format(input_location))
 
   # TODO (saksena): Finalize more stats to gather
   results = []
