@@ -143,8 +143,8 @@ def Run(benchmark_spec):
         FLAGS.dpb_dataflow_staging_location))
     job_arguments.append('"--tempRoot={}"'.format(
         FLAGS.dpb_dataflow_staging_location))
-    job_arguments.append('"--inputFile={}"'.format(input_location))
     job_arguments.append('"--project=apache-beam-testing"')
+    #job_arguments.append('"--inputFile={}"'.format(input_location))
     #job_arguments.append('--runner={}'.format(
     #    gcp_dpb_dataflow.DATAFLOW_RUNNER))
     if not FLAGS.dpb_wordcount_out_base:
