@@ -86,19 +86,21 @@ class GcpDpbDataflow(dpb_service.BaseDpbService):
     cmd = []
 
     # Needed to verify java executable is on the path
-    dataflow_executable = 'mvn'
-    if not vm_util.ExecutableOnPath(dataflow_executable):
-      raise errors.Setup.MissingExecutableError(
-          'Could not find required executable "%s"' % dataflow_executable)
+    dataflow_executable = '/home/jenkins/tools/maven/latest/bin/mvn'
+    # if not vm_util.ExecutableOnPath(dataflow_executable):
+    #   raise errors.Setup.MissingExecutableError(
+    #       'Could not find required executable "%s"' % dataflow_executable)
     cmd.append(dataflow_executable)
 
-    cmd.append('failsafe:integration-test')
+    cmd.append('-e')
+    cmd.append('verify')
     # cmd.append(jarfile)
 
-    cmd.append('-Dit.test=%s' % classname)
-    cmd.append('-DskipITs=false')
-    cmd.append('-DfailIfNoTests=false')
-    cmd.append('-Pdataflow-runner')
+    # cmd.append('-Dit.test=%s' % classname)
+    # cmd.append('-DskipITs=false')
+    # cmd.append('-DfailIfNoTests=false')
+    cmd.append('-Pdataflow-runner,io-it')
+    cmd.append('-pl sdks/java/io/jdbc')
     beam_args = job_arguments if job_arguments else []
 
     #beam_args.append('"--workerMachineType={}"'.format(worker_machine_type))
@@ -108,7 +110,7 @@ class GcpDpbDataflow(dpb_service.BaseDpbService):
       #beam_args.append('"--diskSizeGb={}"'.format(disk_size_gb))
     #beam_args.append('"--defaultWorkerLogLevel={}"'.format(FLAGS.dpb_log_level))
     beam_args.append('"--runner=org.apache.beam.runners.dataflow.testing.TestDataflowRunner"')
-    cmd.append("-DbeamTestPipelineOptions='[{}]'".format(', '.join(beam_args)))
+    cmd.append("-DintegrationTestPipelineOptions='[{}]'".format(', '.join(beam_args)))
     full_cmd = ' '.join(cmd)
     stdout, _, _ = vm_util.IssueCommand([full_cmd],
                                         cwd=self.beam_dir,
